@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Screening Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-robot text-5xl"></i>
+                    <div>
+                        <h1 class="text-4xl font-bold">AI Resume Screener</h1>
+                        <p class="text-purple-200">Powered by OpenAI GPT-4 & LangChain</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm opacity-75">Vector DB: Pinecone</div>
+                    <div class="text-sm opacity-75">Storage: Firebase</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        
+        <!-- Setup Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Job Description -->
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-briefcase text-purple-600 mr-3"></i>
+                    Job Description
+                </h2>
+                <textarea id="jobDescription" rows="10" 
+                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
+                    placeholder="Paste the job description here...">Senior Full Stack Developer
+
+Requirements:
+- 5+ years experience in web development
+- Strong proficiency in JavaScript, React, Node.js
+- Experience with Python and FastAPI
+- Knowledge of PostgreSQL and MongoDB
+- Cloud platform experience (AWS or GCP)
+- CI/CD pipeline setup experience
+- Good communication skills
+- Bachelor's degree in Computer Science or related field
+
+Nice to have:
+- Experience with Docker and Kubernetes
+- TypeScript knowledge
+- Leadership experience</textarea>
+                
+                <div class="mt-4 flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-semibold mb-2">Minimum Score (%)</label>
+                        <input type="number" id="minScore" value="65" min="0" max="100"
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-semibold mb-2">Position</label>
+                        <input type="text" id="position" value="Senior Full Stack Developer"
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resume Upload -->
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-file-upload text-blue-600 mr-3"></i>
+                    Upload Resumes
+                </h2>
+                
+                <div class="border-4 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-purple-500 transition cursor-pointer mb-4"
+                    id="dropZone">
+                    <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                    <p class="text-lg text-gray-600 mb-2">Drag & drop files here</p>
+                    <p class="text-sm text-gray-500">or click to browse</p>
+                    <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.txt" class="hidden">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-2">Or paste resume text:</label>
+                    <textarea id="resumeText" rows="4"
+                        class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none text-sm"
+                        placeholder="Paste resume content here..."></textarea>
+                    <button onclick="addResumeText()" 
+                        class="mt-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                        <i class="fas fa-plus mr-2"></i>Add Resume
+                    </button>
+                </div>
+
+                <div id="uploadedFiles" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button onclick="analyzeResumes()" 
+                class="gradient-bg text-white px-10 py-4 rounded-xl text-xl font-bold hover:opacity-90 transition shadow-lg">
+                <i class="fas fa-magic mr-2"></i>Analyze Resumes
+            </button>
+            <button onclick="clearAll()" 
+                class="bg-gray-500 text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-gray-600 transition">
+                <i class="fas fa-redo mr-2"></i>Reset
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="card p-6 text-center">
+                    <i class="fas fa-users text-4xl text-purple-600 mb-3"></i>
+                    <div class="text-3xl font-bold" id="totalResumes">0</div>
+                    <div class="text-gray-600">Total Screened</div>
+                </div>
+                <div class="card p-6 text-center">
+                    <i class="fas fa-check-circle text-4xl text-green-600 mb-3"></i>
+                    <div class="text-3xl font-bold text-green-600" id="qualified">0</div>
+                    <div class="text-gray-600">Qualified</div>
+                </div>
+                <div class="card p-6 text-center">
+                    <i class="fas fa-chart-line text-4xl text-blue-600 mb-3"></i>
+                    <div class="text-3xl font-bold" id="avgScore">0%</div>
+                    <div class="text-gray-600">Avg Score</div>
+                </div>
+                <div class="card p-6 text-center">
+                    <i class="fas fa-trophy text-4xl text-yellow-600 mb-3"></i>
+                    <div class="text-3xl font-bold" id="topScore">0%</div>
+                    <div class="text-gray-600">Top Score</div>
+                </div>
+            </div>
+
+            <!-- Results List -->
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-list-ul text-purple-600 mr-3"></i>
+                        Candidate Analysis
+                    </h2>
+                    <button onclick="exportResults()" 
+                        class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                        <i class="fas fa-download mr-2"></i>Export to Sheets
+                    </button>
+                </div>
+                
+                <div id="resultsList"></div>
+            </div>
+        </div>
+
+        <!-- Processing Overlay -->
+        <div id="processingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-8 max-w-md text-center">
+                <div class="pulse mb-4">
+                    <i class="fas fa-robot text-6xl text-purple-600"></i>
+                </div>
+                <h3 class="text-2xl font-bold mb-2">Processing Resumes...</h3>
+                <p class="text-gray-600 mb-4">AI is analyzing candidates</p>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progressBar" class="bg-purple-600 h-3 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2" id="progressText">0%</p>
+            </div>
+        </div>
+
+        <!-- Schedule Interview Modal -->
+        <div id="scheduleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-calendar-alt text-purple-600 mr-3"></i>
+                        Schedule Interview
+                    </h3>
+                    <button onclick="closeScheduleModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div id="scheduleContent" class="space-y-6">
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="font-semibold text-lg" id="scheduleCandidateName"></div>
+                        <div class="text-gray-600" id="scheduleCandidateEmail"></div>
+                        <div class="text-sm text-purple-600 mt-1" id="scheduleCandidateScore"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Interview Date</label>
+                            <input type="date" id="interviewDate" 
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-2">Interview Time</label>
+                            <input type="time" id="interviewTime" 
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Duration</label>
+                        <select id="interviewDuration" 
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                            <option value="30">30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60" selected>1 hour</option>
+                            <option value="90">1.5 hours</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Interview Type</label>
+                        <select id="interviewType" 
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                            <option value="technical">Technical Interview</option>
+                            <option value="hr">HR Round</option>
+                            <option value="cultural">Cultural Fit</option>
+                            <option value="final">Final Round</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Meeting Link (Optional)</label>
+                        <input type="url" id="meetingLink" placeholder="https://meet.google.com/..." 
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">Additional Notes</label>
+                        <textarea id="interviewNotes" rows="3" 
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-purple-500 focus:outline-none"
+                            placeholder="Any special instructions or topics to cover..."></textarea>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-semibold mb-3">Send via:</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button onclick="sendCalendarInvite('google')" 
+                                class="bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition">
+                                <i class="fab fa-google mr-2"></i>Google Calendar
+                            </button>
+                            <button onclick="sendCalendarInvite('calendly')" 
+                                class="bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition">
+                                <i class="fas fa-calendar mr-2"></i>Calendly
+                            </button>
+                            <button onclick="sendCalendarInvite('email')" 
+                                class="bg-purple-500 text-white px-4 py-3 rounded-lg hover:bg-purple-600 transition">
+                                <i class="fas fa-envelope mr-2"></i>Email Invite
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Candidate Modal -->
+        <div id="shareModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-8 max-w-xl w-full mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-share-alt text-blue-600 mr-3"></i>
+                        Share Candidate
+                    </h3>
+                    <button onclick="closeShareModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div id="shareContent" class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg mb-6">
+                        <div class="font-semibold text-lg" id="shareCandidateName"></div>
+                        <div class="text-gray-600" id="shareCandidateEmail"></div>
+                        <div class="text-sm text-blue-600 mt-1" id="shareCandidateScore"></div>
+                    </div>
+
+                    <button onclick="downloadCandidatePDF()" 
+                        class="w-full bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition flex items-center justify-center">
+                        <i class="fas fa-file-pdf text-xl mr-3"></i>
+                        <span class="font-semibold">Download as PDF</span>
+                    </button>
+
+                    <button onclick="copyToClipboard()" 
+                        class="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition flex items-center justify-center">
+                        <i class="fas fa-copy text-xl mr-3"></i>
+                        <span class="font-semibold">Copy to Clipboard</span>
+                    </button>
+
+                    <button onclick="exportToFirebase()" 
+                        class="w-full bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition flex items-center justify-center">
+                        <i class="fas fa-database text-xl mr-3"></i>
+                        <span class="font-semibold">Save to Firebase</span>
+                    </button>
+
+                    <button onclick="exportToSheets()" 
+                        class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition flex items-center justify-center">
+                        <i class="fas fa-table text-xl mr-3"></i>
+                        <span class="font-semibold">Add to Google Sheets</span>
+                    </button>
+
+                    <button onclick="shareViaEmail()" 
+                        class="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition flex items-center justify-center">
+                        <i class="fas fa-envelope text-xl mr-3"></i>
+                        <span class="font-semibold">Share via Email</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
