@@ -36,7 +36,7 @@ A powerful AI-powered resume screening application built with Streamlit, featuri
 #### **Step 1: Download the Project**
 ```bash
 # Option A: Clone from GitHub
-git clone https://github.com/yourusername/resume-screening-agent.git
+git clone https://github.com/Sanket200400/AI-Resume-Screener.git
 cd resume-screening-agent
 
 # Option B: Download ZIP and extract
@@ -387,5 +387,6 @@ To connect real AI models:
 ---
 
 **Built with ❤️ using Streamlit**
+
 
 **🌟 Star this repo if you find it useful!**
